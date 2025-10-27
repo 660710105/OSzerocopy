@@ -5,17 +5,17 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 
 public class JioChannel {
+    private File file;
+    public static void run(){
+        
+    }
     public static void main(String[] args) throws Exception {
         JioChannel channel = new JioChannel();
         String pathFile = args[0];
         String extension = getFileExtension(pathFile);
         String choice = args[1];
-        
+
         try {
-            if (args.length < 2) {
-                System.out.println("usage JioChannel");
-                return;
-            }
             long start = System.currentTimeMillis();
             switch (choice) {
                 case "c":
@@ -35,6 +35,7 @@ public class JioChannel {
             e.printStackTrace();
         }
     }
+
     public void copy(String from, String to) throws IOException{
         byte[] data = new byte[8 * 1024];
         FileInputStream fis = null;
@@ -58,30 +59,25 @@ public class JioChannel {
             if(fos != null){
                 fos.close();
             }
-            System.out.println("File copied");
         }
     }
     public void zeroCopy(String from, String to) throws IOException {
-        FileInputStream fis = null;
-        FileOutputStream fos = null;
         FileChannel source = null;
         FileChannel destination = null;
         try {
-            fis = new FileInputStream(from);
-            fos = new FileOutputStream(to);
-            source = fis.getChannel();
-            destination = fos.getChannel();
+            source = new FileInputStream(from).getChannel();
+            destination = new FileOutputStream(to).getChannel();
             source.transferTo(0, source.size(), destination);
         } finally {
-            if(fis != null){
-                fis.close();
+            if(source != null){
+                source.close();
             }
-            if(fos != null){
-                fos.close();
+            if(destination != null){
+                destination.close();
             }
-            System.out.println("File zero-copied");
         }
     }
+
     public static String getFileExtension(String filename) {
         int dotIndex = filename.lastIndexOf('.');
         if (dotIndex > 0 && dotIndex < filename.length() - 1) { // Ensure dot is not at the start or end

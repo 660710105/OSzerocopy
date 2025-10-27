@@ -1,54 +1,93 @@
 import java.io.*;
 import java.net.*;
+import java.util.List;
+import java.util.Scanner;
 
 public class Client {
-    private Socket s = null;
-    private DataInputStream in = null;
-    private DataOutputStream out = null;
-
-    public Client(String addr, int port)
-    {
-        try {
-            s = new Socket(addr, port);
-            System.out.println("Connected");
-
-            in = new DataInputStream(System.in);
-
-            out = new DataOutputStream(s.getOutputStream());
-        }
-        catch (UnknownHostException u) {
-            System.out.println(u);
-            return;
-        }
-        catch (IOException i) {
-            System.out.println(i);
-            return;
-        }
-
-        String m = "";
-
-        while (!m.equals("Over")) {
-            try {
-                m = in.readLine();
-                out.writeUTF(m);
-            }
-            catch (IOException i) {
-                System.out.println(i);
-            }
-        }
-
-        try {
-            in.close();
-            out.close();
-            s.close();
-        }
-        catch (IOException i) {
-            System.out.println(i);
-        }
-    }
-
     public static void main(String[] args) {
-        Client c = new Client("127.0.0.1", 5000);
-        catch
+        if (args.length < 2) {
+            System.out.println("Usage: java JioChannel <serverHost> <port> <targetPath>");
+            return;
+        }
+        String host = args[0];
+        int port = Integer.parseInt(args[1]);
+        File targetDir = new File("./mailBox");
+        if(args.length == 3)
+            targetDir = new File(args[2]);
+        
+        if (!targetDir.exists())
+            targetDir.mkdirs();
+        
+        System.out.println("=== Client download at " + targetDir);
+        
+        try {
+            Socket socket = new Socket(host, port);
+            ObjectInputStream oin = new ObjectInputStream(socket.getInputStream());
+            ObjectOutputStream oout = new ObjectOutputStream(socket.getOutputStream());
+            System.out.println("=== Connected Server " + host + ": " + port + " ===");
+
+            Object obj = oin.readObject();
+            if (!(obj instanceof List)) {
+                System.err.println("Error: not list");
+                return;
+            }
+
+            @SuppressWarnings("unchecked")
+            List<String> files = (List<String>) obj;
+            System.out.println("=== List files ===");
+            for (String f : files)
+                System.out.println(files.indexOf(f) + ":  " + f);
+
+            Scanner sc = new Scanner(System.in);
+            System.out.println("=== Select File ===");
+            System.out.println("Enter index of file:");
+            int indexFile = Integer.parseInt(sc.nextLine());
+            String filename = files.get(indexFile);
+
+            System.out.println("=== Select Mode === \n 1 = Zero-copy, \n 2 = Buffered");
+            System.out.print("Select: ");
+            String mode = sc.nextLine();
+
+            oout.writeObject(filename);
+            oout.writeObject(mode);
+            oout.flush();
+
+            boolean exists = oin.readBoolean();
+            if (!exists) {
+                System.err.println("File does not exist.");
+                return;
+            }
+
+            long fileSize = oin.readLong();
+            System.out.println("=== Server will send " + fileSize + " bytes. ===");
+
+            File outFile = new File(targetDir, filename);
+            long start = System.currentTimeMillis();
+
+            InputStream in = socket.getInputStream();
+            FileOutputStream fos = new FileOutputStream(outFile);
+            try {
+                byte[] buffer = new byte[1024 * 1024];
+                long remain = fileSize;
+                while (remain > 0) {
+                    int read = (buffer.length > remain) ? (int) buffer.length : (int) remain;
+                    int r = in.read(buffer, 0, read);
+                    fos.write(buffer, 0, r);
+                    remain -= r;
+                }
+                fos.flush();
+            } finally {
+                long end = System.currentTimeMillis();
+                System.out.printf("Downloaded to %s (%d ms)\n", outFile.getAbsolutePath(), (end - start));
+                fos.close();
+            }
+        } catch (SocketException s) {
+            System.out.println("Server has shutdown");
+            s.printStackTrace();
+        } catch (IOException i){
+            i.printStackTrace();
+        } catch (ClassNotFoundException c) {
+            c.printStackTrace();
+        }
     }
 }

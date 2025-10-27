@@ -1,55 +1,72 @@
-import java.net.*;
 import java.io.*;
+import java.net.*;
+import java.util.Arrays;
 
 public class Server {
+    private static File fileDir;
+    private static int port;
 
-    private Socket s = null;
-    private ServerSocket ss = null;
-    private DataInputStream in = null;
-
-    public Server(int port) {
-        try
-        {
-            ss = new ServerSocket(port);
-            System.out.println("Server started");
-
-            System.out.println("Waiting for a client ...");
-
-            s = ss.accept();
-            System.out.println("Client accepted");
-
-            in = new DataInputStream(
-                new BufferedInputStream(s.getInputStream()));
-
-            String m = "";
-
-            while (!m.equals("Over"))
-            {
-                try
-                {
-                    m = in.readUTF();
-                    System.out.println(m);
-
-                }
-                catch(IOException i)
-                {
-                    System.out.println(i);
-                }
+    public static void main(String args[]) {
+        try {
+            if (args.length < 1) {
+                System.out.println("Usage: java Server <fileDir> [port]");
+                return;
             }
-            System.out.println("Closing connection");
+            fileDir = new File(args[0]);
+            if (args.length >= 2) {
+                port = Integer.parseInt(args[2]);
+            } else {
+                port = 9090;
+            }
+            Server server = new Server();
+            server.start();
 
-            // Close connection
-            s.close();
-            in.close();
-        }
-        catch(IOException i)
-        {
-            System.out.println(i);
+        } catch (IOException i) {
+            // IOE throws Exception
         }
     }
 
-    public static void main(String args[])
-    {
-        Server s = new Server(5000);
+    public void start() throws IOException {
+        if (!fileDir.exists() || !fileDir.isDirectory()) {
+            throw new IllegalArgumentException("Directory does not exist: " + fileDir.getAbsolutePath());
+        }
+        try {
+            ServerSocket serverSocket = new ServerSocket(port);
+            System.out.println("Server listening on port " + port + ", fileDirectory: " + fileDir.getAbsolutePath());
+            while (true) {
+                try {
+                    Socket client = serverSocket.accept();
+                    System.out.println("=== User "+client.getLocalSocketAddress() + " has connected. ===");
+                    sendFilenameList(client, fileDir);
+                } catch (Exception e) {
+                    serverSocket.close();
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendFilenameList(Socket client, File file) {
+        try (
+            OutputStream output = client.getOutputStream();
+            PrintWriter writer = new PrintWriter(output, true);
+        ) {
+
+            writer.println(file);
+            
+            System.out.println("Sent " + file.getName() + " filenames to client " + client.getRemoteSocketAddress());
+
+        } catch (IOException e) {
+            System.err.println("Error sending file list to client " + client.getRemoteSocketAddress() + ": " + e.getMessage());
+        } finally {
+            try {
+                client.close();
+                System.out.println("Client " + client.getRemoteSocketAddress() + " disconnected.");
+            } catch (IOException e) {
+                System.err.println("Error closing client socket: " + e.getMessage());
+            }
+        }
     }
 }
