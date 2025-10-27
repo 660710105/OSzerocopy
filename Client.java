@@ -3,13 +3,13 @@ import java.net.*;
 import java.util.List;
 import java.util.Scanner;
 
-public class Client implements Runnable{
+class Client implements Runnable{
 
     private String host;
     private int port;
     private File targetDir;
 
-    public Client(String host, int port, string pathFile){
+    public Client(String host, int port, String pathFile){
         this.host = (host.isEmpty())? 
             "localhost":
              host;
