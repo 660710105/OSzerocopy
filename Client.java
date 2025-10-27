@@ -3,21 +3,29 @@ import java.net.*;
 import java.util.List;
 import java.util.Scanner;
 
-public class Client {
-    public static void main(String[] args) {
-        if (args.length < 2) {
-            System.out.println("Usage: java JioChannel <serverHost> <port> <targetPath>");
-            return;
-        }
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
-        File targetDir = new File("./mailBox");
-        if(args.length == 3)
-            targetDir = new File(args[2]);
+public class Client implements Runnable{
+
+    private String host;
+    private int port;
+    private File targetDir;
+
+    public Client(String host, int port, string pathFile){
+        this.host = (host.isEmpty())? 
+            "localhost":
+             host;
+
+        this.port = port;
+
+        this.targetDir = (pathFile.isEmpty())?
+            new File("./mailBox"):
+            new File(pathFile);
         
         if (!targetDir.exists())
             targetDir.mkdirs();
-        
+    }
+
+    @Override
+    public void run() {
         System.out.println("=== Client download at " + targetDir);
         
         try {
