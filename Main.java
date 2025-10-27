@@ -9,9 +9,9 @@ public class Main {
                 case 1:
                     if ("SERVER".equals(args[0].toUpperCase())) {
                         System.out.print("Enter path file directory (or skip to use .\\send): ");
-                        String pathFile = sc.nextLine().trim();
+                        String pathFile = sc.nextLine();
                         System.out.print("Enter port (or skip to use port 9090): ");
-                        String p = sc.nextLine().trim();
+                        String p = sc.nextLine();
                         int port = (p.isEmpty())? 0: Integer.parseInt(p);
                         Server server = new Server(pathFile, port);
                         server.run();
@@ -22,12 +22,12 @@ public class Main {
                 break;
             case 0:
                 System.out.print("Enter host (or skip to use localhost): ");
-                String host = sc.nextLine().trim();
+                String host = sc.nextLine();
                 System.out.print("Enter port: ");
                 int port = sc.nextInt();
                 sc.nextLine();
                 System.out.print("Enter path file directory (or skip to use .\\mailBox): ");
-                String pathFile = sc.nextLine().trim();
+                String pathFile = sc.nextLine();
                 Client client = new Client(host, port, pathFile);
                 client.run();
                 break;

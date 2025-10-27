@@ -21,7 +21,6 @@ public class ZeroCopyFileTransfer {
         System.out.println("--- Java Network Zero-Copy Demo ---");
         File testFile = new File(FILE_NAME);
         createDummyFile(testFile, FILE_SIZE_MB);
-        System.out.println("Hi");
         Thread serverThread = new Thread(() -> {
             try {
                 startServer(testFile.length());
@@ -35,7 +34,6 @@ public class ZeroCopyFileTransfer {
 
         runTest(testFile, "Traditional", true);
         runTest(testFile, "Zero-Copy", false);
-        System.out.println("Hi");
         serverThread.interrupt();
         testFile.delete();
     }
@@ -128,11 +126,9 @@ public class ZeroCopyFileTransfer {
         System.out.printf("Creating dummy file: %s (%d MB)...", file.getName(), sizeMB);
         long fileSize = (long) sizeMB * 1024 * 1024;
         byte[] zeroByte = new byte[]{'0'};
-        System.out.println("Hi");
         try (FileOutputStream fos = new FileOutputStream(file)) {
             for (long i = 0; i < fileSize; i++) {
                 fos.write(zeroByte);
-                System.out.println("Hi");
             }
         } catch (Exception e){
             System.out.println("error");

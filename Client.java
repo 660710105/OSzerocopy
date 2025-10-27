@@ -26,9 +26,10 @@ class Client implements Runnable{
 
     @Override
     public void run() {
-        System.out.println("=== Client download at " + targetDir);
+        System.out.println("=== Client download at " + targetDir + " ===");
         
         try {
+            @SuppressWarnings("resource")
             Socket socket = new Socket(host, port);
             ObjectInputStream oin = new ObjectInputStream(socket.getInputStream());
             ObjectOutputStream oout = new ObjectOutputStream(socket.getOutputStream());
@@ -41,18 +42,18 @@ class Client implements Runnable{
             }
 
             @SuppressWarnings("unchecked")
-            List<String> files = (List<String>) obj;
+            List<String> listFilenames = (List<String>) obj;
             System.out.println("=== List files ===");
-            for (String f : files)
-                System.out.println(files.indexOf(f) + ":  " + f);
+            for (int i=0 ; i < listFilenames.size(); i++)
+                System.out.println( i + ":  " + listFilenames.get(i));
 
             Scanner sc = new Scanner(System.in);
             System.out.println("=== Select File ===");
-            System.out.println("Enter index of file:");
+            System.out.print("Enter index of file:");
             int indexFile = Integer.parseInt(sc.nextLine());
-            String filename = files.get(indexFile);
+            String filename = listFilenames.get(indexFile);
 
-            System.out.println("=== Select Mode === \n 1 = Zero-copy, \n 2 = Buffered");
+            System.out.println("=== Select Mode === \n 0 = Copy \n 1 = Zero-copy \n 2 = Buffered");
             System.out.print("Select: ");
             String mode = sc.nextLine();
 
@@ -90,7 +91,7 @@ class Client implements Runnable{
                 fos.close();
             }
         } catch (SocketException s) {
-            System.out.println("Server has shutdown");
+            System.out.println("Disconnected server");
             s.printStackTrace();
         } catch (IOException i){
             i.printStackTrace();
