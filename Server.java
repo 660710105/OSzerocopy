@@ -23,12 +23,14 @@ class Server implements Runnable {
                     "=== Server listening on port " + port + ", fileDirectory: " + fileDir.getAbsolutePath() + " ===");
             while (true) {
                 Socket client = serverSocket.accept();
+		client.setKeepAlive(true);
                 try {
                     System.out.println(" >> Client " + client.getRemoteSocketAddress() + " has connected.");
-                    sendFilenameList(client, fileDir);
+		    
+                    ObjectOutputStream oout = new ObjectOutputStream(client.getOutputStream());
+                    sendFilenameList(oout, fileDir);
 
                     ObjectInputStream oin = new ObjectInputStream(client.getInputStream());
-                    ObjectOutputStream oout = new ObjectOutputStream(client.getOutputStream());
 
                     Object name = oin.readObject();
                     if (!(name instanceof String)) {
@@ -50,7 +52,10 @@ class Server implements Runnable {
                         oout.flush();
                         System.out.println(" >> Client " + client.getRemoteSocketAddress() +" requested missing file: " + filename);
                         continue;
-                    }
+                    } else {
+			    oout.writeBoolean(true);
+			    oout.flush();
+		    }
 
                     Jio jio = new Jio();
                     FileInputStream fis = new FileInputStream(new File(filename));
@@ -70,6 +75,7 @@ class Server implements Runnable {
                     
 
                 } catch (SocketException s) {
+			System.err.println("err: " + s.getCause());
                     System.err.println(" >> Client " + client.getRemoteSocketAddress() +" disconnected.");
                 }
             }
@@ -78,11 +84,11 @@ class Server implements Runnable {
         }
     }
 
-    private void sendFilenameList(Socket client, File file) {
+    private void sendFilenameList(ObjectOutputStream oout, File file) {
         try {
-            ObjectOutputStream oout = new ObjectOutputStream(client.getOutputStream());
+		//ObjectOutputStream oout = new ObjectOutputStream(client.getOutputStream());
 
-            System.out.println(" >> Sent list of files to client " + client.getRemoteSocketAddress());
+		//System.out.println(" >> Sent list of files to client " + client.getRemoteSocketAddress());
 
             File[] files = file.listFiles();
             List<String> listFileName = new ArrayList<>();
@@ -93,8 +99,8 @@ class Server implements Runnable {
             oout.writeObject(listFileName);
             oout.flush();
         } catch (IOException e) {
-            System.err.println(
-                    "Error sending file list to client " + client.getRemoteSocketAddress() + ": " + e.getMessage());
+            // System.err.println(
+            //         "Error sending file list to client " + client.getRemoteSocketAddress() + ": " + e.getMessage());
         }
     }
 }

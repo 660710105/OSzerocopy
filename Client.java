@@ -31,6 +31,7 @@ class Client implements Runnable{
         try {
             @SuppressWarnings("resource")
             Socket socket = new Socket(host, port);
+	    socket.setKeepAlive(true);
             ObjectInputStream oin = new ObjectInputStream(socket.getInputStream());
             ObjectOutputStream oout = new ObjectOutputStream(socket.getOutputStream());
             System.out.println(" >> Connected Server " + host + ": " + port);
@@ -60,7 +61,7 @@ class Client implements Runnable{
             oout.writeObject(mode);
             oout.flush();
 
-            Object exists = oin.readObject();
+            boolean exists = oin.readBoolean();
             System.out.println(exists);
 
             long fileSize = oin.readLong();
