@@ -1,6 +1,5 @@
 import java.io.*;
 import java.net.*;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,39 +24,53 @@ class Server implements Runnable {
             while (true) {
                 Socket client = serverSocket.accept();
                 try {
-                    System.out.println(" >> Client " + client.getLocalSocketAddress() + " has connected.");
+                    System.out.println(" >> Client " + client.getRemoteSocketAddress() + " has connected.");
                     sendFilenameList(client, fileDir);
-                    
+
                     ObjectInputStream oin = new ObjectInputStream(client.getInputStream());
+                    ObjectOutputStream oout = new ObjectOutputStream(client.getOutputStream());
+
                     Object name = oin.readObject();
                     if (!(name instanceof String)) {
                         System.err.println("Error: expected filename string");
-                        return;
+                        continue;
                     }
                     String filename = (String) name;
 
                     Object mode = oin.readObject();
-                    if(!(mode instanceof Integer)){
+                    if (!(mode instanceof String)) {
                         System.err.println("Error: expected mode number");
+                        continue;
                     }
-                    int modeNumber = (int) mode;
+                    String modeNumber = (String) mode;
+
+                    File fileToSend = new File(fileDir, filename);
+                    if (!fileToSend.exists() || !fileToSend.isFile()) {
+                        oout.writeBoolean(false);
+                        oout.flush();
+                        System.out.println(" >> Client " + client.getRemoteSocketAddress() +" requested missing file: " + filename);
+                        continue;
+                    }
+
                     Jio jio = new Jio();
                     FileInputStream fis = new FileInputStream(new File(filename));
-
                     switch (modeNumber) {
-                        case 0:
-                            jio.copyTransfer(fis,client.getOutputStream());
+                        case "0":
+                            jio.copyTransfer(fis, client.getOutputStream());
                             break;
-                        case 1:
+                        case "1":
                             jio.zeroCopyTransfer(fis.getChannel(), client.getChannel());
                             break;
-                        case 2:
+                        case "2":
                             jio.bufferCopyThread(fis.getChannel(), client.getChannel());
                         default:
                             break;
                     }
+
+                    
+
                 } catch (SocketException s) {
-                    System.err.println("Client disconnected");
+                    System.err.println(" >> Client " + client.getRemoteSocketAddress() +" disconnected.");
                 }
             }
         } catch (Exception e) {
@@ -67,22 +80,21 @@ class Server implements Runnable {
 
     private void sendFilenameList(Socket client, File file) {
         try {
-            ObjectOutputStream oos = new ObjectOutputStream(client.getOutputStream());
+            ObjectOutputStream oout = new ObjectOutputStream(client.getOutputStream());
 
             System.out.println(" >> Sent list of files to client " + client.getRemoteSocketAddress());
 
             File[] files = file.listFiles();
-            @SuppressWarnings("")
             List<String> listFileName = new ArrayList<>();
-            for(File f : files){
-                if (f instanceof File) listFileName.add(f.getName());
+            for (File f : files) {
+                if (f instanceof File)
+                    listFileName.add(f.getName());
             }
-            oos.writeObject(listFileName);
-            oos.flush();
-            oos.close();
-            
+            oout.writeObject(listFileName);
+            oout.flush();
         } catch (IOException e) {
-            System.err.println("Error sending file list to client " + client.getRemoteSocketAddress() + ": " + e.getMessage());
+            System.err.println(
+                    "Error sending file list to client " + client.getRemoteSocketAddress() + ": " + e.getMessage());
         }
     }
 }

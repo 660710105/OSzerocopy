@@ -26,21 +26,20 @@ class Client implements Runnable{
 
     @Override
     public void run() {
-        System.out.println("=== Client download at " + targetDir + " ===");
+        System.out.println(" >> Client download at " + targetDir);
         
         try {
             @SuppressWarnings("resource")
             Socket socket = new Socket(host, port);
             ObjectInputStream oin = new ObjectInputStream(socket.getInputStream());
             ObjectOutputStream oout = new ObjectOutputStream(socket.getOutputStream());
-            System.out.println("=== Connected Server " + host + ": " + port + " ===");
+            System.out.println(" >> Connected Server " + host + ": " + port);
 
             Object obj = oin.readObject();
             if (!(obj instanceof List)) {
                 System.err.println("Error: not list");
                 return;
             }
-
             @SuppressWarnings("unchecked")
             List<String> listFilenames = (List<String>) obj;
             System.out.println("=== List files ===");
@@ -49,7 +48,7 @@ class Client implements Runnable{
 
             Scanner sc = new Scanner(System.in);
             System.out.println("=== Select File ===");
-            System.out.print("Enter index of file:");
+            System.out.print("Enter index of file: ");
             int indexFile = Integer.parseInt(sc.nextLine());
             String filename = listFilenames.get(indexFile);
 
@@ -61,11 +60,8 @@ class Client implements Runnable{
             oout.writeObject(mode);
             oout.flush();
 
-            boolean exists = oin.readBoolean();
-            if (!exists) {
-                System.err.println("File does not exist.");
-                return;
-            }
+            Object exists = oin.readObject();
+            System.out.println(exists);
 
             long fileSize = oin.readLong();
             System.out.println("=== Server will send " + fileSize + " bytes. ===");
