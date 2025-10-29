@@ -1,5 +1,8 @@
 import java.io.*;
 import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Scanner;
 
@@ -64,29 +67,34 @@ class Client implements Runnable{
             boolean exists = oin.readBoolean();
             System.out.println(exists);
 
-            long fileSize = oin.readLong();
-            System.out.println("=== Server will send " + fileSize + " bytes. ===");
+            // long fileSize = oin.readLong();
+            // System.out.println("=== Server will send " + fileSize + " bytes. ===");
 
             File outFile = new File(targetDir, filename);
+            FileOutputStream fos = new FileOutputStream(outFile);
             long start = System.currentTimeMillis();
 
-            InputStream in = socket.getInputStream();
-            FileOutputStream fos = new FileOutputStream(outFile);
-            try {
-                byte[] buffer = new byte[1024 * 1024];
-                long remain = fileSize;
-                while (remain > 0) {
-                    int read = (buffer.length > remain) ? (int) buffer.length : (int) remain;
-                    int r = in.read(buffer, 0, read);
-                    fos.write(buffer, 0, r);
-                    remain -= r;
-                }
-                fos.flush();
-            } finally {
-                long end = System.currentTimeMillis();
-                System.out.printf("Downloaded to %s (%d ms)\n", outFile.getAbsolutePath(), (end - start));
-                fos.close();
-            }
+            byte[] fileContent = (byte[]) oin.readObject();
+            fos.write(fileContent);
+            System.out.println("self destruction");
+
+            // InputStream in = socket.getInputStream();
+            
+            // try {
+            //     byte[] buffer = new byte[1024 * 1024];
+            //     long remain = fileSize;
+            //     while (remain > 0) {
+            //         int read = (buffer.length > remain) ? (int) buffer.length : (int) remain;
+            //         int r = in.read(buffer, 0, read);
+            //         fos.write(buffer, 0, r);
+            //         remain -= r;
+            //     }
+            //     fos.flush();
+            // } finally {
+            //     long end = System.currentTimeMillis();
+            //     System.out.printf("Downloaded to %s (%d ms)\n", outFile.getAbsolutePath(), (end - start));
+            //     fos.close();
+            // }
         } catch (SocketException s) {
             System.out.println("Disconnected server");
             s.printStackTrace();
