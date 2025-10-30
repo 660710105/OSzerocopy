@@ -1,3 +1,5 @@
+package zerocopy.ioutils;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -6,35 +8,35 @@ import java.nio.channels.FileChannel;
 
 public class JioChannel {
     private File file;
-    public static void run(){
+    // public static void run(){
         
-    }
-    public static void main(String[] args) throws Exception {
-        JioChannel channel = new JioChannel();
-        String pathFile = args[0];
-        String extension = getFileExtension(pathFile);
-        String choice = args[1];
+    // }
+    // public static void main(String[] args) throws Exception {
+    //     JioChannel channel = new JioChannel();
+    //     String pathFile = args[0];
+    //     String extension = getFileExtension(pathFile);
+    //     String choice = args[1];
 
-        try {
-            long start = System.currentTimeMillis();
-            switch (choice) {
-                case "c":
-                    channel.copy(pathFile, extension);
-                    break;
-                case "z":
-                    channel.zeroCopy(pathFile, extension);
-                    break;
-                default:
-                    System.out.println("error method");
-                    break;
-            }
-            long end = System.currentTimeMillis();
-            long time = end - start;
-            System.out.println("Time " + time + "ms");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+    //     try {
+    //         long start = System.currentTimeMillis();
+    //         switch (choice) {
+    //             case "c":
+    //                 channel.copy(pathFile, extension);
+    //                 break;
+    //             case "z":
+    //                 channel.zeroCopy(pathFile, extension);
+    //                 break;
+    //             default:
+    //                 System.out.println("error method");
+    //                 break;
+    //         }
+    //         long end = System.currentTimeMillis();
+    //         long time = end - start;
+    //         System.out.println("Time " + time + "ms");
+    //     } catch (Exception e) {
+    //         e.printStackTrace();
+    //     }
+    // }
 
     public void copy(String from, String to) throws IOException{
         byte[] data = new byte[8 * 1024];

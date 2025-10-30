@@ -1,4 +1,8 @@
+package zerocopy;
+
 import java.util.Scanner;
+import zerocopy.client.*;
+import zerocopy.server.*;
 
 public class Main {
         static int port = 9090;

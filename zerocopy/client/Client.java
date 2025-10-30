@@ -1,9 +1,11 @@
+package zerocopy.client;
+
 import java.io.*;
 import java.net.*;
 import java.util.List;
 import java.util.Scanner;
 
-class Client implements Runnable {
+public class Client implements Runnable {
         private String host;
         private int port;
         private File targetDir;

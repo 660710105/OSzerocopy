@@ -1,4 +1,4 @@
 #!/bin/bash
 
-javac Main.java
-java Main $@
+javac zerocopy/Main.java
+java zerocopy/Main $@
