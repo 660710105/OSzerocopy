@@ -26,7 +26,7 @@ public class Main {
 			switch (args[argsIdx]) {
 			case "--port":
 			case "-p":
-				if (argsIdx + 1 > args.length) {
+				if (argsIdx + 1 >= args.length) {
 					printUsages();
 					return;
 				}
@@ -35,7 +35,7 @@ public class Main {
 				break;
 			case "--directory":
 			case "-d":
-				if (argsIdx + 1 > args.length) {
+				if (argsIdx + 1 >= args.length) {
 					printUsages();
 					return;
 				}
@@ -44,7 +44,7 @@ public class Main {
 				break;
 			case "--send-directory":
 			case "-D":
-				if (argsIdx + 1 > args.length) {
+				if (argsIdx + 1 >= args.length) {
 					printUsages();
 					return;
 				}
@@ -53,7 +53,7 @@ public class Main {
 				break;
 			case "--host":
 			case "-h":
-				if (argsIdx + 1 > args.length) {
+				if (argsIdx + 1 >= args.length) {
 					printUsages();
 					return;
 				}
@@ -72,6 +72,7 @@ public class Main {
 		}
 
 		System.out.println("server: " + runServer + ", host: " + remoteHost + ", port: " + port + ", dir: " + directory + ", send dir: " + sendDirectory);
+		
 		try {
 			if (runServer) {
 				Server server = new Server(sendDirectory, port);
