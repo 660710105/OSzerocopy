@@ -43,7 +43,7 @@ public class Jio {
 
     }
 
-    public static String getFileExtension(String filename) {
+    public String getFileExtension(String filename) {
         int dotIndex = filename.lastIndexOf('.');
         if (dotIndex > 0 && dotIndex < filename.length() - 1) { // Ensure dot is not at the start or end
             return filename.substring(dotIndex + 1);

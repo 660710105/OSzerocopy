@@ -35,10 +35,11 @@ public class Client implements Runnable {
                         
                         System.out.println(" >> Connected Server " + host + ": " + port);
 
-                        oin = new ObjectInputStream(socket.getInputStream());
                         oout = new ObjectOutputStream(socket.getOutputStream());
+                        oin = new ObjectInputStream(socket.getInputStream());
 
-                        Object obj = oin.read();
+
+                        Object obj = oin.readObject();
 
                         @SuppressWarnings("unchecked") List<String> listFilenames = (List<String>)obj;
                         
@@ -53,7 +54,7 @@ public class Client implements Runnable {
                         int indexFile = Integer.parseInt(sc.nextLine());
                         String filename = listFilenames.get(indexFile);
 
-                        System.out.println("=== Select Mode === \n 0 = Copy \n 1 = Zero-copy \n 2 = Buffered");
+                        System.out.println("=== Select Mode === \n 0 = Copy \n 1 = Zero-Copy \n 2 = Buffered");
                         System.out.print("Select: ");
                         String mode = sc.nextLine();
 
@@ -62,10 +63,9 @@ public class Client implements Runnable {
                         oout.flush();
 
                         boolean exists = oin.readBoolean();
-                        System.out.println(exists);
 
-                        // long fileSize = oin.readLong();
-                        // System.out.println("=== Server will send " + fileSize + " bytes. ===");
+                        long fileSize = oin.readLong();
+                        System.out.println(" >> Server will send " + fileSize + " bytes. ===");
 
                         File outFile = new File(targetDir, filename);
                         FileOutputStream fos = new FileOutputStream(outFile);
@@ -76,25 +76,25 @@ public class Client implements Runnable {
                         
                         fos.close();
                         
-                        System.out.println("self destruction");
+                        System.out.println(" >> self destruction");
 
-                        // InputStream in = socket.getInputStream();
+                        InputStream in = socket.getInputStream();
             
-                        // try {
-                        //     byte[] buffer = new byte[1024 * 1024];
-                        //     long remain = fileSize;
-                        //     while (remain > 0) {
-                        //         int read = (buffer.length > remain) ? (int) buffer.length : (int) remain;
-                        //         int r = in.read(buffer, 0, read);
-                        //         fos.write(buffer, 0, r);
-                        //         remain -= r;
-                        //     }
-                        //     fos.flush();
-                        // } finally {
-                        //     long end = System.currentTimeMillis();
-                        //     System.out.printf("Downloaded to %s (%d ms)\n", outFile.getAbsolutePath(), (end - start));
-                        //     fos.close();
-                        // }
+                        try {
+                            byte[] buffer = new byte[1024 * 1024];
+                            long remain = fileSize;
+                            while (remain > 0) {
+                                int read = (buffer.length > remain) ? (int) buffer.length : (int) remain;
+                                int r = in.read(buffer, 0, read);
+                                fos.write(buffer, 0, r);
+                                remain -= r;
+                            }
+                            fos.flush();
+                        } finally {
+                            long end = System.currentTimeMillis();
+                            System.out.printf("Downloaded to %s (%d ms)\n", outFile.getAbsolutePath(), (end - start));
+                            fos.close();
+                        }
 
                         // closing this will throw exception, so it needed to be is this block.
                         oin.close();

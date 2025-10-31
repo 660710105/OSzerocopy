@@ -7,6 +7,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.print.DocFlavor.STRING;
+
 import zerocopy.ioutils.*;
 
 public class Server implements Runnable {
@@ -31,12 +34,13 @@ public class Server implements Runnable {
                         while (true) {
                                 Socket client = serverSocket.accept();
                                 client.setKeepAlive(true);
+                                SocketAddress clientAddr = client.getRemoteSocketAddress();
                                 try {
-                                        System.out.println(" >> Client " + client.getRemoteSocketAddress() + " has connected.");
+                                        System.out.println(" >> Client " + clientAddr + " has connected.");
 
-                                        ObjectInputStream oin = new ObjectInputStream(client.getInputStream());
                                         ObjectOutputStream oout = new ObjectOutputStream(client.getOutputStream());
-                                        
+                                        ObjectInputStream oin = new ObjectInputStream(client.getInputStream());
+
                                         sendFilenameList(oout, fileDir);
 
                                         Object name = oin.readObject();
@@ -45,19 +49,31 @@ public class Server implements Runnable {
                                                 continue;
                                         }
                                         String filename = (String) name;
-
-                                        Object mode = oin.readObject();
-                                        if (!(mode instanceof String)) {
+                                        System.out.println();
+                                        Object modeNumber = oin.readObject();
+                                        if (!(modeNumber instanceof String)) {
                                                 System.err.println("Error: expected mode number");
                                                 continue;
                                         }
-                                        String modeNumber = (String) mode;
+                                        String modeIdx = (String) modeNumber;
+                                        String mode = "";
+                                        switch(modeIdx){
+                                                case "0":
+                                                        mode = "Copy";
+                                                        break;
+                                                case "1":
+                                                        mode = "Zero-Copy";
+                                                        break;
+                                                case "2":
+                                                        mode = "Buffered";
+                                                        break;
+                                        };
 
                                         File fileToSend = new File(fileDir, filename);
                                         if (!fileToSend.exists() || !fileToSend.isFile()) {
                                                 oout.writeBoolean(false);
                                                 oout.flush();
-                                                System.out.println(" >> Client " + client.getRemoteSocketAddress() + " requested missing file: "
+                                                System.out.println(" >> Client " + clientAddr + " requested missing file: "
                                                                    + filename);
                                                 continue;
                                         } else {
@@ -65,19 +81,26 @@ public class Server implements Runnable {
                                                 oout.flush();
                                         }
 
-                                        Jio jio = new Jio();
-                                        FileInputStream fis = new FileInputStream(new File(filename));
-
-                                        Path path = Paths.get(fileToSend.getPath());
-                                        byte[] fileContent = Files.readAllBytes(path);
-                                        // // *อาจส่งชื่อไฟล์ไปก่อน*
-                                        // oout.writeObject(path.getFileName().toString());
-                                        // // *ส่งเนื้อหาไฟล์*
-                                        oout.writeObject(fileContent);
+                                        long fileSize = fileToSend.length();
+                                        oout.writeLong(fileSize);
                                         oout.flush();
+
+                                        System.out.println(clientAddr + " requests file: " + fileToSend + ", mode: " + mode + ", size " + fileSize + " bytes.");
+
+                                        Jio jio = new Jio();
+                                        FileOutputStream fos = new FileOutputStream(jio.getFileExtension(filename));
+                                        FileInputStream fis = new FileInputStream(fileToSend);
+
+                                        // Path path = Paths.get(fileToSend.getPath());
+                                        // byte[] fileContent = Files.readAllBytes(path);
+                                        // // // *อาจส่งชื่อไฟล์ไปก่อน*
+                                        // // oout.writeObject(path.getFileName().toString());
+                                        // // // *ส่งเนื้อหาไฟล์*
+                                        // oout.writeObject(fileContent);
+                                        // oout.flush();
                                         System.out.println("Bye Bye");
 
-                                        switch (modeNumber) {
+                                        switch (mode) {
                                         case "0":
                                                 jio.copyTransfer(fis, client.getOutputStream());
                                                 break;
@@ -89,9 +112,11 @@ public class Server implements Runnable {
                                         default:
                                                 break;
                                         }
+                                        boolean complete = oin.readBoolean();
+                                        System.out.println("complete" + clientAddr);
                                 } catch (Exception s) {
                                         System.err.println("err: " + s.getCause());
-                                        System.err.println(" >> Client " + client.getRemoteSocketAddress() + " disconnected.");
+                                        System.err.println(" >> Client " + clientAddr + " disconnected.");
                                 }
                         }
                 } catch (Exception e) {
