@@ -1,20 +1,19 @@
 package zerocopy.ioutils;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectOutput;
-import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.net.Socket;
+import java.net.SocketException;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 
 public class Jio {
-    private static int BUFFER_SIZE = 8 * 1024;
-    public void copyTransfer(InputStream fileIn, OutputStream socketOut) throws IOException {
+    private static int BUFFER_SIZE = 64 * 1024; // 64 KB
+
+    public void copyTransfer(File file, InputStream fileIn, OutputStream socketOut) throws IOException {
         byte[] buffer = new byte[BUFFER_SIZE];
         int bytesRead;
         while ((bytesRead = fileIn.read(buffer)) != -1) {
@@ -23,23 +22,26 @@ public class Jio {
         socketOut.flush();
     }
 
-    public void zeroCopyTransfer(FileChannel fileChannel, SocketChannel socketChannel) throws IOException {
-        long bytesToSend = fileChannel.size();
-        long bytesSent = 0;
-        long position = 0;
+    public void zeroCopyTransfer(File file, FileChannel fileChannel, WritableByteChannel wbc) throws IOException {
+        try {
+            long fileSize = file.length();
+            long position = 0;
+            while (position < fileSize) {
+                long transferred = fileChannel.transferTo(position, fileSize - position, wbc);
 
-        while (bytesSent < bytesToSend) {
-            long count = bytesToSend - bytesSent;
-            long transferred = fileChannel.transferTo(position, count, socketChannel);
-            if (transferred <= 0) {
-                break;
+                if (transferred <= 0) {
+                    System.err.println("Transfer stalled or socket closed.");
+                    break;
+                }
+
+                position += transferred;
             }
-            bytesSent += transferred;
-            position += transferred;
+        } catch (SocketException s) {
+           s.printStackTrace();
         }
     }
 
-    public void bufferCopyThread(FileChannel fileChannel, SocketChannel socketChannel) throws IOException{
+    public void bufferCopyThread(File file, FileChannel fileChannel, WritableByteChannel wbc) throws IOException {
 
     }
 
