@@ -102,8 +102,6 @@ public class Client implements Runnable {
                                 System.out.printf("Download %.2f KB.\n", (fileSize - remain) / 1000.0);
                         }
                         fos.flush();
-                        outFile.delete();
-                        System.err.println("Cancel recieve file.");
                         long end = System.currentTimeMillis();
                         System.out.printf("Sent " + filename
                                         + "mode" + mode
