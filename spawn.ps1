@@ -2,4 +2,4 @@
 javac zerocopy/Main.java
 
 # Run the compiled class, passing all script arguments () to the Java program
-java zerocopy/Main 
+java zerocopy/Main $args
