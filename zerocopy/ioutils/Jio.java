@@ -5,13 +5,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketException;
-import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
-import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 
 public class Jio {
-    private static int BUFFER_SIZE = 64 * 1024; // 64 KB
+    private static int BUFFER_SIZE = 64 * 1024;
 
     public void copyTransfer(File file, InputStream fileIn, OutputStream socketOut) throws IOException {
         byte[] buffer = new byte[BUFFER_SIZE];
@@ -41,15 +39,23 @@ public class Jio {
         }
     }
 
-    public void bufferCopyThread(File file, FileChannel fileChannel, WritableByteChannel wbc) throws IOException {
+    public void multiThread(File file, String host, int port, int nthread, String mode) throws IOException {
+        long partSize = file.length() / nthread;
+        Thread[] threads = new Thread[nthread];
+        for (int i = 0; i < nthread; i++) {
+            long startByte = i * partSize;
+            long endByte;
 
-    }
+            if (i == nthread - 1) {
+                endByte = nthread - 1;
+            } else {
+                endByte = startByte + partSize - 1;
+            }
 
-    public String getFileExtension(String filename) {
-        int dotIndex = filename.lastIndexOf('.');
-        if (dotIndex > 0 && dotIndex < filename.length() - 1) { // Ensure dot is not at the start or end
-            return filename.substring(dotIndex + 1);
+            String tempPartFile = "part." + i;
+            SendThread worker = new SendThread(file, host, port, startByte, endByte, tempPartFile);
+            threads[i] = new Thread(worker);
+            threads[i].start();
         }
-        return null; // No extension found
     }
 }

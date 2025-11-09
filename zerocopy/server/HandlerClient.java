@@ -51,6 +51,7 @@ public class HandlerClient implements Runnable {
             }
             int modeIdx = (int) modeNumber;
             String mode = "";
+            int nthread = 0;
             switch (modeIdx) {
                 case 0:
                     mode = "Copy";
@@ -59,7 +60,12 @@ public class HandlerClient implements Runnable {
                     mode = "Zero-Copy";
                     break;
                 case 2:
-                    mode = "Buffered";
+                    mode = "Copy-MultiThreads";
+                    nthread = oin.readInt();
+                    break;
+                case 3:
+                    mode = "Zero-Copy-MultiThreads";
+                    nthread = oin.readInt();
                     break;
             }
             ;
@@ -86,10 +92,16 @@ public class HandlerClient implements Runnable {
                     jio.zeroCopyTransfer(fileToSend, fis.getChannel(),
                             wbc);
                     break;
-                case "Buffered":
-                    jio.bufferCopyThread(fileToSend, fis.getChannel(),
-                            wbc);
+                case "Copy-MultiThreads":
+                    jio.multiThread(fileToSend, client.getInetAddress().getHostAddress(),
+                                    client.getPort(), nthread,"Copy-Multithreads");
+                    break;
+                case "Zero-Copy-MultiThreads":
+                    jio.multiThread(fileToSend,  client.getInetAddress().getHostAddress(), 
+                                    client.getPort(), nthread,"Zero-Copy-Multithreads");
+                    break;
                 default:
+                    jio.copyTransfer(fileToSend, fis, oout);
                     break;
             }
             boolean complete = oin.readBoolean();

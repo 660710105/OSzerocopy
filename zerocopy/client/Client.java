@@ -59,10 +59,14 @@ public class Client implements Runnable {
                         }
                         String filename = listFilenames.get(indexFile);
 
-                        System.out.println("=== Select Mode === \n 0 = Copy \n 1 = Zero-Copy \n 2 = Buffered");
+                        System.out.println("=== Select Mode === \n "
+                                        + " 0 = Copy \n"
+                                        + " 1 = Zero-Copy \n"
+                                        + " 2 = Copy-MultiThreads \n"
+                                        + " 3 = Zero-Copy-MultiThreads");
                         System.out.print("Select: ");
                         int modeIdx = sc.nextInt();
-                        if (modeIdx > 2) {
+                        if (modeIdx > 3) {
                                 System.err.println("Error: Mode not found");
                         }
                         String mode = "";
@@ -74,7 +78,10 @@ public class Client implements Runnable {
                                         mode = "Zero-Copy";
                                         break;
                                 case 2:
-                                        mode = "Buffered";
+                                        mode = "Copy-MultiThreads";
+                                        break;
+                                case 3:
+                                        mode = "Zero-Copy-MultiThreads";
                                         break;
                         }
 
@@ -83,29 +90,40 @@ public class Client implements Runnable {
                         oout.flush();
 
                         long fileSize = oin.readLong();
-                        System.out.printf(" >> Server will send .%2f KB.", fileSize/1000.0);
+                        System.out.printf(" >> Server will send .%2f KB.", fileSize / 1000.0);
 
                         File outFile = new File(targetDir, filename);
                         FileOutputStream fos = new FileOutputStream(outFile);
                         long start = System.currentTimeMillis();
                         InputStream in = socket.getInputStream();
 
-                        byte[] buf = new byte[64 * 1024]; // 64 KB
+                        byte[] buffer = new byte[64 * 1024];
                         long remain = fileSize;
-                        while (remain > 0) {
-                                int toRead = (int) Math.min(buf.length, remain);
-                                int r = in.read(buf, 0, toRead);
-                                if (r < 0)
-                                        throw new EOFException("Unexpected EOF");
-                                fos.write(buf, 0, r);
-                                remain -= r;
-                                System.out.printf("Download %.2f KB.\n", (fileSize - remain) / 1000.0);
+                        switch (mode) {
+                                case "Copy":
+                                case "Zero-Copy":
+                                        while (remain > 0) {
+                                                int toRead = (int) Math.min(buffer.length, remain);
+                                                int r = in.read(buffer, 0, toRead);
+                                                if (r < 0)
+                                                        throw new EOFException("Unexpected EOF");
+                                                fos.write(buffer, 0, r);
+                                                remain -= r;
+                                                System.out.printf("Download %.2f KB.\n",
+                                                                (fileSize - remain) / 1000.0);
+                                        }
+                                        fos.flush();
+                                        break;
+                                case "Copy-MultiThreads":
+                                case "Zero-Copy-MultiThreads":
+                                        
+                                        break;
                         }
-                        fos.flush();
+
                         long end = System.currentTimeMillis();
                         System.out.printf("Sent " + filename
-                                        + "mode" + mode
-                                        + " %.2f s\n",((end - start)/1000.0));
+                                        + ", mode" + mode
+                                        + " (%.2f s)\n", ((end - start) / 1000.0));
                         oout.writeBoolean(true); // send complete
                         oout.flush();
                         Thread.sleep(2000);
