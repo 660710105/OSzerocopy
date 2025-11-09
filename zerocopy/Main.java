@@ -79,10 +79,10 @@ public class Main {
                 
                 try {
                         if (runServer) {
-                                Server server = new Server(sendDirectory, port);
+                                Thread server = new Thread(new Server(sendDirectory, port));
                                 server.run();
                         } else {
-                                Client client = new Client(remoteHost, port, directory);
+                                Thread client = new Thread(new Client(remoteHost, port, directory));
                                 client.run();
                         }
                 } catch (Exception e) {
