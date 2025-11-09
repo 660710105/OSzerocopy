@@ -16,7 +16,7 @@ import java.util.List;
 
 import zerocopy.ioutils.Jio;
 
-public class HandlerClient implements Runnable{
+public class HandlerClient implements Runnable {
     private Socket client;
     private File fileDir;
 
@@ -24,6 +24,7 @@ public class HandlerClient implements Runnable{
         this.client = client;
         this.fileDir = fileDir;
     }
+
     @Override
     public void run() {
         try {
@@ -98,15 +99,17 @@ public class HandlerClient implements Runnable{
             if (complete) {
                 System.out.println("complete" + clientAddr);
             }
-
-        } catch (SocketException s) {
-            System.err.println("Error: " + s.getCause());
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getCause());
             System.err.println(" >> Client " + clientAddr + " disconnected.");
-        } catch (IOException io){
-            io.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
         }
+        // } catch (SocketException s) {
+        // System.err.println("Error: " + s.getCause());
+        // System.err.println(" >> Client " + clientAddr + " disconnected.");
+        // } catch (IOException io){
+        // io.printStackTrace();
+        // } catch (ClassNotFoundException e) {
+        // e.printStackTrace();
     }
 
     private void sendFilenameList(ObjectOutputStream oout, File file) {
