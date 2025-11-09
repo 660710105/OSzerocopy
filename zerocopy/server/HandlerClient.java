@@ -27,14 +27,10 @@ public class HandlerClient implements Runnable {
 
     @Override
     public void run() {
+        SocketAddress clientAddr = null; 
         try {
             client.setKeepAlive(true);
-        } catch (SocketException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        SocketAddress clientAddr = client.getRemoteSocketAddress();
-        try {
+            clientAddr = client.getRemoteSocketAddress();
             System.out.println(" >> Client " + clientAddr + " has connected.");
 
             ObjectOutputStream oout = new ObjectOutputStream(client.getOutputStream());
