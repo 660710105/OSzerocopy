@@ -1,4 +1,7 @@
 @echo off
+
+git clean -x -f
+    
 :: Compile the Java file
 javac zerocopy/Main.java
 
