@@ -16,4 +16,9 @@ public class Size {
     public double getSize() {
         return size;
     }
+
+    @Override
+    public String toString() {
+        return String.format("%.2f %s", size, sizeNotation.toString());
+    }
 }
