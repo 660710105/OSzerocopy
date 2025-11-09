@@ -85,7 +85,7 @@ public class Main {
         try {
             if (runServer) {
                 infoStringBuilder
-                    .append("Select hosting directory: " + directory + "\n")
+                    .append("Select hosting directory: " + sendDirectory + "\n")
                     .append("Now Server will listening is this following interfaces: \n");
                 
                 Enumeration<NetworkInterface> interfaceLookup = NetworkInterface.getNetworkInterfaces();
