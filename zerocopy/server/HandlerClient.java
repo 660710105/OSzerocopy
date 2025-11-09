@@ -19,6 +19,7 @@ import zerocopy.ioutils.Jio;
 public class HandlerClient implements Runnable {
     private Socket client;
     private File fileDir;
+    private SocketAddress clientAddr; 
 
     HandlerClient(Socket client, File fileDir) {
         this.client = client;
@@ -27,7 +28,7 @@ public class HandlerClient implements Runnable {
 
     @Override
     public void run() {
-        SocketAddress clientAddr = null; 
+        
         try {
             client.setKeepAlive(true);
             clientAddr = client.getRemoteSocketAddress();
