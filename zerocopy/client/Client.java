@@ -1,149 +1,182 @@
 package zerocopy.client;
 
-import java.io.*;
-import java.net.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+// เพิ่ม import
+import zerocopy.ioutils.Jio;
+import zerocopy.ioutils.Protocol;
+
 public class Client implements Runnable {
-        private String host;
-        private int port;
-        private File targetDir;
-        private static int BUFFER_SIZE = 8 * 1024;
+    private String host;
+    private int port;
+    private File targetDir;
+    private Jio jio;
 
-        public Client(String host, int port, String pathFile) {
-                this.host = host;
-                this.port = port;
-                this.targetDir = new File(pathFile);
+    public Client(String host, int port, String pathFile) {
+        this.host = host;
+        this.port = port;
+        this.targetDir = new File(pathFile);
+        this.jio = new Jio();
 
-                if (!targetDir.exists()) {
-                        targetDir.mkdirs();
-                }
+        if (!targetDir.exists()) {
+            targetDir.mkdirs();
         }
+    }
 
-        @Override
-        public void run() {
-                Scanner sc = new Scanner(System.in);
-                Socket socket;
-                ObjectInputStream oin;
-                ObjectOutputStream oout;
+    @Override
+    public void run() {
+        Scanner sc = new Scanner(System.in);
 
-                try {
-                        System.out.println(" >> Client download at " + targetDir);
+        try (SocketChannel controlChannel = SocketChannel.open(new InetSocketAddress(host, port))){
+            System.out.println(" >> Client download at " + targetDir);
+            System.out.println(" >> Connected Server (Control Plane) " + host + ": " + port);
 
-                        socket = new Socket(host, port);
-                        socket.setKeepAlive(true);
+            // 1. รับรายชื่อไฟล์
+            List<String> listFileName = receiveFileList(controlChannel);
 
-                        System.out.println(" >> Connected Server " + host + ": " + port);
+            System.out.println("File list: ");
+            for (String f : listFileName) {
+                System.out.println("\t" + f);
+            }
 
-                        oout = new ObjectOutputStream(socket.getOutputStream());
-                        oin = new ObjectInputStream(socket.getInputStream());
+            System.out.println();
+            System.out.println("Mode: ");
+            String[] modes = { "Copy", "Zero-Copy", "Copy-MultiThreads", "Zero-Copy-MultiThreads" };
+            for (int i = 0; i < modes.length; i++) {
+                System.out.println("\t" + i + ". " + modes[i]);
+            }
+            System.out.println();
 
-                        Object obj = oin.readObject();
+            System.out.print("Select file name: ");
+            String filename = sc.nextLine();
+            System.out.print("Select mode: ");
+            int modeIdx = sc.nextInt();
+            String mode = modes[modeIdx];
 
-                        @SuppressWarnings("unchecked")
-                        List<String> listFilenames = (List<String>) obj;
+            
+            // --- ส่วนที่ 2: ถามจำนวนเธรด ถ้าเลือกโหมด 2 หรือ 3 ---
+            int nthread = 1;
+            if (modeIdx == 2 || modeIdx == 3) {
+                System.out.print("Select number of threads: ");
+                nthread = sc.nextInt();
+            }
+            // --------------------------------------------------
 
-                        System.out.println("=== List files ===");
+            long fileSize = sendMainRequest(controlChannel, filename, modeIdx, nthread);
+            if (fileSize == -1) {
+                System.err.println("Server could not find file: " + filename);
+                return;
+            }
+            System.out.println(" >> Receiving file: " + filename + " (" + fileSize + " bytes)");
 
-                        for (int i = 0; i < listFilenames.size(); i++) {
-                                System.out.println(i + ":  " + listFilenames.get(i));
-                        }
+            File file = new File(targetDir, filename);
+            long start = System.currentTimeMillis();
 
-                        System.out.println("=== Select File ===");
-                        System.out.print("Enter index of file: ");
-                        int indexFile = Integer.parseInt(sc.nextLine());
-                        if (indexFile >= listFilenames.size()) {
-                                System.err.println("Error: File index out of bound");
-                        }
-                        String filename = listFilenames.get(indexFile);
+            // 3. จัดการการดาวน์โหลด
+            switch (mode) {
+                case "Copy": // Mode 0
+                case "Zero-Copy": // Mode 1
+                    
+                    // --- 🚀 End-to-End Zero-Copy (Mode 1) ---
+                    // เปิด "Data Plane" (Socket ใหม่) เพื่อรับไฟล์
+                    downloadSingleFile(file, filename, fileSize, (modeIdx == 1));
+                    break;
+                    
+                case "Copy-MultiThreads": // Mode 2
+                case "Zero-Copy-MultiThreads": // Mode 3
+                    // โค้ดนี้จะใช้ "ไฟล์ย่อย + รวมไฟล์" ที่แก้ปัญหาคอขวดแล้ว
+                    jio.multiThread(file, fileSize, host, port, nthread, mode, targetDir);
+                    break;
+            }
 
-                        System.out.println("=== Select Mode === \n "
-                                        + " 0 = Copy \n"
-                                        + " 1 = Zero-Copy \n"
-                                        + " 2 = Copy-MultiThreads \n"
-                                        + " 3 = Zero-Copy-MultiThreads");
-                        System.out.print("Select: ");
-                        int modeIdx = sc.nextInt();
-                        if (modeIdx > 3) {
-                                System.err.println("Error: Mode not found");
-                        }
-                        String mode = "";
-                        switch (modeIdx) {
-                                case 0:
-                                        mode = "Copy";
-                                        break;
-                                case 1:
-                                        mode = "Zero-Copy";
-                                        break;
-                                case 2:
-                                        mode = "Copy-MultiThreads";
-                                        break;
-                                case 3:
-                                        mode = "Zero-Copy-MultiThreads";
-                                        break;
-                        }
 
-                        oout.writeObject(filename);
-                        oout.writeInt(modeIdx);
-                        oout.flush();
-
-                        long fileSize = oin.readLong();
-                        System.out.printf(" >> Server will send .%2f KB.", fileSize / 1000.0);
-
-                        File outFile = new File(targetDir, filename);
-                        FileOutputStream fos = new FileOutputStream(outFile);
-                        long start = System.currentTimeMillis();
-                        InputStream in = socket.getInputStream();
-
-                        byte[] buffer = new byte[64 * 1024];
-                        long remain = fileSize;
-                        switch (mode) {
-                                case "Copy":
-                                case "Zero-Copy":
-                                        while (remain > 0) {
-                                                int toRead = (int) Math.min(buffer.length, remain);
-                                                int r = in.read(buffer, 0, toRead);
-                                                if (r < 0)
-                                                        throw new EOFException("Unexpected EOF");
-                                                fos.write(buffer, 0, r);
-                                                remain -= r;
-                                                System.out.printf("Download %.2f KB.\n",
-                                                                (fileSize - remain) / 1000.0);
-                                        }
-                                        fos.flush();
-                                        break;
-                                case "Copy-MultiThreads":
-                                case "Zero-Copy-MultiThreads":
-                                        
-                                        break;
-                        }
-
-                        long end = System.currentTimeMillis();
-                        System.out.printf("Sent " + filename
-                                        + ", mode" + mode
-                                        + " (%.2f s)\n", ((end - start) / 1000.0));
-                        oout.writeBoolean(true); // send complete
-                        oout.flush();
-                        Thread.sleep(2000);
-                        oin.close();
-                        oout.close();
-                        in.close();
-                        fos.close();
-                        socket.close();
-                } catch (SocketException s) {
-                        System.out.println("Disconnected server");
-                        s.printStackTrace();
-                } catch (IOException i) {
-                        i.printStackTrace();
-                } catch (ClassNotFoundException c) {
-                        c.printStackTrace();
-                } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                } finally {
-                        sc.close();
-                }
+            long end = System.currentTimeMillis();
+            System.out.printf("Downloaded " + filename
+                    + ", mode: " + mode
+                    + " (%.2f s)\\n", ((end - start) / 1000.0));
+            
+            // 4. ส่งสัญญาณ "เสร็จสิ้น" บน Control Plane
+            Protocol.writeInt(controlChannel, Protocol.REQ_COMPLETE);
+            
+        } catch (SocketException s) {
+            System.out.println("Disconnected from server");
+            // s.printStackTrace();
+        } catch (IOException i) {
+            i.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            sc.close();
         }
+    }
+
+    // (Helper 1) รับรายชื่อไฟล์
+    private List<String> receiveFileList(SocketChannel channel) throws IOException {
+        Protocol.writeInt(channel, Protocol.REQ_FILE_LIST); // 1. ขอรายชื่อไฟล์
+        int fileCount = Protocol.readInt(channel); // 2. รับจำนวนไฟล์
+        
+        List<String> list = new ArrayList<>();
+        for (int i = 0; i < fileCount; i++) {
+            list.add(Protocol.readString(channel)); // 3. วนลูปรับชื่อไฟล์
+        }
+        return list;
+    }
+
+    // (Helper 2) ส่งคำขอหลักและรับขนาดไฟล์
+    private long sendMainRequest(SocketChannel channel, String filename, int modeIdx, int nthread) throws IOException {
+        Protocol.writeInt(channel, Protocol.REQ_MAIN); // 1. บอกว่านี่คือคำขอหลัก
+        Protocol.writeString(channel, filename); // 2. ส่งชื่อไฟล์
+        Protocol.writeInt(channel, modeIdx); // 3. ส่งโหมด
+        Protocol.writeInt(channel, nthread); // 4. ส่งจำนวนเธรด
+        
+        return Protocol.readLong(channel); // 5. รับขนาดไฟล์กลับมา
+    }
+
+    // (Helper 3) โหลดไฟล์ (โหมด 0 และ 1)
+    private void downloadSingleFile(File file, String filename, long fileSize, boolean isZeroCopy) throws IOException {
+        // เปิด "Data Plane" (Socket ใหม่)
+        try (SocketChannel dataChannel = SocketChannel.open(new InetSocketAddress(host, port));
+             FileOutputStream fos = new FileOutputStream(file);
+             FileChannel destChannel = fos.getChannel()) {
+            
+            System.out.println(" >> Data Plane connected for single file download...");
+
+            // 1. ส่งคำขอดาวน์โหลด (DATA_REQUEST)
+            Protocol.writeInt(dataChannel, Protocol.REQ_DATA_SINGLE);
+            Protocol.writeString(dataChannel, filename);
+            Protocol.writeInt(dataChannel, isZeroCopy ? 1 : 0); // 1=ZeroCopy, 0=Copy
+            
+            // 2. รับข้อมูลไฟล์
+            if (isZeroCopy) {
+                // --- 🚀 Client-Side Zero-Copy (Mode 1) ---
+                System.out.println(" >> Client receiving via Zero-Copy (transferFrom)...");
+                long totalReceived = 0;
+                while (totalReceived < fileSize) {
+                    long received = destChannel.transferFrom(dataChannel, totalReceived, fileSize - totalReceived);
+                    if (received <= 0) break;
+                    totalReceived += received;
+                }
+            } else {
+                // --- Client-Side Copy (Mode 0) ---
+                System.out.println(" >> Client receiving via Copy (read/write)...");
+                ByteBuffer buffer = ByteBuffer.allocate(8 * 1024);
+                long totalReceived = 0;
+                while (totalReceived < fileSize && dataChannel.read(buffer) != -1) {
+                    buffer.flip();
+                    totalReceived += destChannel.write(buffer);
+                    buffer.clear();
+                }
+            }
+        }
+    }
 }

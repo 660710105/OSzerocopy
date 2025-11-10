@@ -2,6 +2,8 @@ package zerocopy.server;
 
 import java.io.*;
 import java.net.*;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 
 public class Server implements Runnable {
         private File fileDir;
@@ -19,17 +21,25 @@ public class Server implements Runnable {
                 }
 
                 try {
-                        ServerSocket serverSocket = new ServerSocket(port);
+                        // 1. สร้าง ServerSocketChannel และผูกกับพอร์ต
+                        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+                        serverSocketChannel.socket().bind(new InetSocketAddress(port));
+                        serverSocketChannel.configureBlocking(true); // ทำงานแบบ Blocking เหมือนเดิม
+
                         System.out.println(
-                                        "=== Server listening on port " + port + ", fileDirectory: "
-                                                        + fileDir.getAbsolutePath() + " ===");
+                            "=== Server listening on port " + port + ", fileDirectory: "
+                                            + fileDir.getAbsolutePath() + " ===");
+
                         while (true) {
-                                Socket client = serverSocket.accept();
-                                Thread handle = new Thread(new HandlerClient(client, fileDir));
+                                SocketChannel clientChannel = serverSocketChannel.accept(); // 2. รับ SocketChannel
+                                Socket clientSocket = clientChannel.socket(); // 3. เอา Socket (แบบเก่า) ออกมา
+
+                        // 4. ส่ง Socket (แบบเก่า) ไปให้ HandlerClient
+                        // (HandlerClient จะดึง Channel กลับไปเอง)
+                                Thread handle = new Thread(new HandlerClient(clientSocket, fileDir)); 
                                 handle.start();
                         }
                 } catch (IOException e) {
-                        // TODO Auto-generated catch block
                         e.printStackTrace();
                 }
         }

@@ -103,7 +103,7 @@ public class Main {
                 System.out.println(info);
                 
                 Thread server = new Thread(new Server(sendDirectory, port));
-                server.run();
+                server.start();
             } else {
                 String info = infoStringBuilder
                     .append("Selecting remote: " + remoteHost + " ")
@@ -113,7 +113,7 @@ public class Main {
                 System.out.println(info);
                 
                 Thread client = new Thread(new Client(remoteHost, port, directory));
-                client.run();
+                client.start();
             }
         } catch (SocketException exception) {
             exception.printStackTrace();
