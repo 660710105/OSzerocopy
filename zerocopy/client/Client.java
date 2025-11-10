@@ -7,12 +7,13 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.List;
 import java.util.Scanner;
 
+import zerocopy.ioutils.Jio;
 import zerocopy.ioutils.PrintProcess;
 import zerocopy.ioutils.notation.Size;
 import zerocopy.ioutils.notation.SizeConverter;
 import zerocopy.ioutils.notation.SizeNotation;
 
-public class Client implements Runnable {
+public class Client{
         private String host;
         private int port;
         private File targetDir;
@@ -27,7 +28,6 @@ public class Client implements Runnable {
                 }
         }
 
-        @Override
         public void run() {
                 Scanner sc = new Scanner(System.in);
                 Socket socket;
@@ -64,7 +64,7 @@ public class Client implements Runnable {
                         }
                         String filename = listFilenames.get(indexFile);
 
-                        System.out.println("=== Select Mode ===\n "
+                        System.out.println("=== Select Mode ===\n"
                                         + "0 = Copy \n"
                                         + "1 = Zero-Copy \n"
                                         + "2 = Copy-MultiThreads \n"
@@ -105,14 +105,13 @@ public class Client implements Runnable {
                         InputStream in = socket.getInputStream();
                         ReadableByteChannel rbc = Channels.newChannel(in);
 
-                        byte[] buffer = new byte[64 * 1024];
+                        byte[] buffer = new byte[Jio.BUFFER_SIZE];
                         long remain = fileSize;
                         PrintProcess printProcess = new PrintProcess();
                         Thread processThread = new Thread(printProcess);
                         switch (mode) {
                                 case "Copy":
                                         processThread.start();
-                                        String processCopy;
                                         while (remain > 0) {
                                                 int toRead = (int) Math.min(buffer.length, remain);
                                                 int r = in.read(buffer, 0, toRead);
@@ -120,14 +119,8 @@ public class Client implements Runnable {
                                                         throw new EOFException("Unexpected EOF");
                                                 fos.write(buffer, 0, r);
                                                 remain -= r;
-                                                processCopy = SizeConverter
-                                                                .toHighestSize(new Size(SizeNotation.B,
-                                                                                (fileSize - remain)))
-                                                                .toString();
-                                                //System.out.printf("Download %s.\n", processCopy);
 
-                                                printProcess.setProcess(processCopy);
-
+                                                printProcess.setProcess(fileSize-remain);
                                         }
                                         processThread.interrupt();
                                         printProcess.stop();
@@ -157,7 +150,7 @@ public class Client implements Runnable {
 
                         long end = System.currentTimeMillis();
                         System.out.printf("Sent " + filename
-                                        + ", mode" + mode
+                                        + ", mode " + mode
                                         + " (%.2f s)\n", ((end - start) / 1000.0));
                         oout.writeBoolean(true); // send complete
                         oout.flush();

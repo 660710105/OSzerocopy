@@ -9,7 +9,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
 public class Jio {
-    private static int BUFFER_SIZE = 64 * 1024;
+    public static int BUFFER_SIZE = 64 * 1024;
 
     public void copyTransfer(File file, InputStream fileIn, OutputStream socketOut) throws IOException {
         byte[] buffer = new byte[BUFFER_SIZE];

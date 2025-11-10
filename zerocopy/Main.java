@@ -85,7 +85,7 @@ public class Main {
         try {
             if (runServer) {
                 infoStringBuilder
-                    .append("Select hosting directory: " + sendDirectory + "\n")
+                    .append("\nSelect hosting directory: " + sendDirectory + "\n")
                     .append("Now Server will listening is this following interfaces: \n");
                 
                 Enumeration<NetworkInterface> interfaceLookup = NetworkInterface.getNetworkInterfaces();
@@ -102,17 +102,17 @@ public class Main {
                 String info = infoStringBuilder.toString();
                 System.out.println(info);
                 
-                Thread server = new Thread(new Server(sendDirectory, port));
+                Server server = new Server(sendDirectory, port);
                 server.run();
             } else {
                 String info = infoStringBuilder
-                    .append("Selecting remote: " + remoteHost + " ")
-                    .append("on port " + port + "\n")
+                    .append("\nSelecting remote: " + remoteHost + " ")
+                    .append("on port " + port)
                     .toString();
 
                 System.out.println(info);
                 
-                Thread client = new Thread(new Client(remoteHost, port, directory));
+                Client client = new Client(remoteHost, port, directory);
                 client.run();
             }
         } catch (SocketException exception) {

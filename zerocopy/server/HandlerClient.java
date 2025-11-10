@@ -15,6 +15,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import zerocopy.ioutils.Jio;
+import zerocopy.ioutils.notation.Size;
+import zerocopy.ioutils.notation.SizeConverter;
+import zerocopy.ioutils.notation.SizeNotation;
 
 public class HandlerClient implements Runnable {
     private Socket client;
@@ -78,12 +81,14 @@ public class HandlerClient implements Runnable {
 
             System.out.println(clientAddr + " requests file: " + fileToSend
                     + ", mode: " + mode
-                    + ", size " + fileSize + " bytes.");
+                    + ", size " + SizeConverter
+                    .toHighestSize(new Size(SizeNotation.B,(fileSize))).toString());
 
             Jio jio = new Jio();
             FileInputStream fis = new FileInputStream(fileToSend);
             OutputStream outputStream = client.getOutputStream();
             WritableByteChannel wbc = Channels.newChannel(outputStream);
+            
             switch (mode) {
                 case "Copy":
                     jio.copyTransfer(fileToSend, fis, outputStream);
