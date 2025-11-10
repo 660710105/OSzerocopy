@@ -58,15 +58,15 @@ public class Client{
             }
 
             System.out.println("=== Select Mode ===\n"
-                               + "0 = Copy \n"
-                               + "1 = Zero-Copy \n"
-                               + "2 = Copy-MultiThreads \n"
-                               + "3 = Zero-Copy-MultiThreads");
+                               + "1 = Copy \n"
+                               + "2 = Zero-Copy \n"
+                               + "3 = Copy-MultiThreads \n"
+                               + "4 = Zero-Copy-MultiThreads");
             
             System.out.print("Select: ");
             
             int modeIdx = sc.nextInt();
-            if (modeIdx > 3) {
+            if (modeIdx > 4) {
                 System.err.println("Error: Mode not found");
             }
             
