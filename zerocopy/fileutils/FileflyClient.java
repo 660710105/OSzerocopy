@@ -1,45 +1,26 @@
 package zerocopy.fileutils;
 
 import java.io.File;
-import java.io.Serializable;
 import java.util.ArrayList;
 
 import zerocopy.ioutils.notation.Size;
 import zerocopy.ioutils.notation.SizeConverter;
-import zerocopy.ioutils.notation.SizeNotation;
 
-public class Filefly implements Serializable {
-    private ArrayList<File> files = new ArrayList<File>();
-    private File ownFile;
+public class FileflyClient {
+    private ArrayList<FileList> files = new ArrayList<FileList>();
     
-    public Filefly(String path) {
-        ownFile = new File(path);
-        if (ownFile.exists() == false) {
-            throw new IllegalArgumentException("File or directory does not exist: " + ownFile.getAbsolutePath());
-        }
-        
-        if (ownFile.isDirectory()) {
-            File[] fileLists = ownFile.listFiles();
-            for (File _file : fileLists) {
-                files.add(_file);
-            }
-        } else {
-            files.add(ownFile);
-        }
+    public FileflyClient(ArrayList<FileList> files) {
+        this.files = files;
     }
 
-    public File getOwnFile() {
-        return ownFile;
-    }
-
-    public File getFile(int idx) {
+    public FileList getFileList(int idx) {
         return files.get(idx);
     }
 
-    public File[] getAllFiles() throws Exception {
-        Object[] rawFileArray = files.toArray();
-        if (rawFileArray instanceof File[]) {
-            return (File[]) rawFileArray;
+    public FileList[] getAllFilesList() throws Exception {
+        Object[] rawFileListArray = files.toArray();
+        if (rawFileListArray instanceof File[]) {
+            return (FileList[]) rawFileListArray;
         }
         throw new Exception("Cannot cast File object!");
     }
@@ -55,10 +36,10 @@ public class Filefly implements Serializable {
 
         StringBuilder stringBuilder = new StringBuilder();
         long fileIdx = 1;
-        for (File _file : files) {
+        for (FileList _fileList : files) {
             stringBuilder.append(fileIdx++ + ". ");
             
-            String fileName = _file.getName();
+            String fileName = _fileList.getFileName();
             if (fileName.length() > maxFileNamePrintLength) {
                 // print ... at the end of file
                 for (int i = 0; i < maxFileNamePrintLength - 3; i++) {
@@ -74,8 +55,7 @@ public class Filefly implements Serializable {
             }
             stringBuilder.append(' '); // spacing
 
-            long _rawFileSizeByte = _file.length();
-            Size _rawFileSize = new Size(SizeNotation.B, _rawFileSizeByte);
+            Size _rawFileSize = _fileList.getFileSize();
             String fileSizeString = SizeConverter.toHighestSize(_rawFileSize).toString();
 
             // dejavu

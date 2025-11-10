@@ -1,8 +1,6 @@
 package zerocopy.ioutils.notation;
 
-import java.io.Serializable;
-
-public class SizeConverter implements Serializable {
+public class SizeConverter {
     public static Size convert(SizeNotation toNotation, Size sourceSize) {
         int srcLevel = sourceSize.getSizeNotation().getTypeLevel();
         int desLevel = toNotation.getTypeLevel();

@@ -4,10 +4,12 @@ import java.io.*;
 import java.net.*;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 import zerocopy.common.CopyMode;
-import zerocopy.fileutils.Filefly;
+import zerocopy.fileutils.FileList;
+import zerocopy.fileutils.FileflyClient;
 import zerocopy.ioutils.Jio;
 import zerocopy.ioutils.PrintProcess;
 import zerocopy.ioutils.notation.Size;
@@ -46,8 +48,10 @@ public class Client{
             oout.writeObject("CLIENT_REQUEST");
             oout.flush();
 
-            Object _rawFilefly = oin.readObject();
-            Filefly filefly = (Filefly) _rawFilefly;
+            @SuppressWarnings("unchecked")
+                ArrayList<FileList> _rawFileList = (ArrayList<FileList>) oin.readObject();
+            
+            FileflyClient filefly = new FileflyClient(_rawFileList);
             
             System.out.println("=== List files ===");
             System.out.println(filefly.fancyFileInfo());
@@ -87,13 +91,13 @@ public class Client{
             }
             oout.flush();
 
-            long fileSizeByte = filefly.getFile(fileIdx).length();
-            Size fileSize = new Size(SizeNotation.B, fileSizeByte);
+            long fileSizeByte = filefly.getFileList(fileIdx).getFileSizeByte();
+            Size fileSize = filefly.getFileList(fileIdx).getFileSize();
             Size _highestFileSize = SizeConverter.toHighestSize(fileSize);
             
             System.out.printf(" >> Server will send " + _highestFileSize.toString() + ".\n");
 
-            String _selectFileName = filefly.getFile(fileIdx).getName();
+            String _selectFileName = filefly.getFileList(fileIdx).getFileName();
 
             // create a new one on client
             File outFile = new File(targetDir, _selectFileName);
@@ -143,7 +147,7 @@ public class Client{
             case ZEROCOPY_MULTITHREAD:
                 try {
                     Jio jio = new Jio();
-                    jio.multiThread(filefly.getFile(fileIdx), fileSizeByte, host, port, nthOfThread, mode, targetDir);
+                    jio.multiThread(outFile, fileSizeByte, host, port, nthOfThread, mode, targetDir);
                 } catch (InterruptedException e) {
                     System.err.println("Multi-thread download interrupted.");
                     e.printStackTrace();

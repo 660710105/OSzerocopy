@@ -14,7 +14,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
 import zerocopy.common.CopyMode;
-import zerocopy.fileutils.Filefly;
+import zerocopy.fileutils.FileflyServer;
 import zerocopy.ioutils.Jio;
 import zerocopy.ioutils.notation.Size;
 import zerocopy.ioutils.notation.SizeConverter;
@@ -22,13 +22,13 @@ import zerocopy.ioutils.notation.SizeNotation;
 
 public class HandlerClient implements Runnable {
     private Socket client;
-    private Filefly filefly;
+    private FileflyServer fileflyServer;
     private SocketAddress clientAddr;
     private Jio jio;
 
-    HandlerClient(Socket client, Filefly filefly) {
+    HandlerClient(Socket client, FileflyServer fileflyServer) {
         this.client = client;
-        this.filefly = filefly;
+        this.fileflyServer = fileflyServer;
         this.jio = new Jio();
     }
 
@@ -76,7 +76,7 @@ public class HandlerClient implements Runnable {
     private void handleClientRequest(OutputStream clientOutputStream, InputStream clInputStream, 
                                     ObjectOutputStream oout, ObjectInputStream oin){
         try{
-            oout.writeObject(filefly);
+            oout.writeObject(fileflyServer.convertToFileLists());
 
             int fileIdx = oin.readInt();
             CopyMode mode = (CopyMode) oin.readObject();
@@ -86,9 +86,9 @@ public class HandlerClient implements Runnable {
                 nthOfThread = oin.readInt();
             }
             
-            File fileToSend = filefly.getFile(fileIdx);
+            File fileToSend = fileflyServer.getFile(fileIdx);
             
-            long fileSize = filefly.getFile(fileIdx).length();
+            long fileSize = fileflyServer.getFile(fileIdx).length();
             Size _rawFileSize = new Size(SizeNotation.B, fileSize);
             Size _displayFileSize = SizeConverter.toHighestSize(_rawFileSize);
 
@@ -135,7 +135,7 @@ public class HandlerClient implements Runnable {
             long endByte = oin.readLong();
             CopyMode mode = (CopyMode) oin.readObject();
 
-            File fileToSend = new File(filefly.getOwnFile(),filename);
+            File fileToSend = new File(fileflyServer.getOwnFile(), filename);
             if (!fileToSend.exists()) {
                 System.err.println("Thread " + clientAddr + " requested non-existent file: " + filename);
                 oout.writeLong(-1);
