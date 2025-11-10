@@ -2,6 +2,7 @@ package zerocopy.server;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -10,6 +11,7 @@ import java.net.SocketAddress;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
+import zerocopy.common.CopyMode;
 import zerocopy.fileutils.Filefly;
 import zerocopy.ioutils.Jio;
 import zerocopy.ioutils.notation.Size;
@@ -19,83 +21,83 @@ import zerocopy.ioutils.notation.SizeNotation;
 public class HandlerClient implements Runnable {
     private Socket client;
     private Filefly filefly;
-    private SocketAddress clientAddr; 
+    private SocketAddress clientAddr;
+    private Jio jio;
 
     HandlerClient(Socket client, Filefly filefly) {
         this.client = client;
         this.filefly = filefly;
+        this.jio = new Jio();
     }
 
     @Override
     public void run() {
-        
         try {
             client.setKeepAlive(true);
+            
             clientAddr = client.getRemoteSocketAddress();
+            
             System.out.println(" >> Client " + clientAddr + " has connected.");
 
             ObjectOutputStream oout = new ObjectOutputStream(client.getOutputStream());
             ObjectInputStream oin = new ObjectInputStream(client.getInputStream());
+            OutputStream clientOutputStream = client.getOutputStream();
+            InputStream clientInputStream = client.getInputStream();
 
             oout.writeObject(filefly);
 
             int fileIdx = oin.readInt();
-            int modeIdx = oin.readInt();
-            String mode = "";
-            int nthread = 0;
-            switch (modeIdx) {
-            case 0:
-                mode = "Copy";
-                break;
-            case 1:
-                mode = "Zero-Copy";
-                break;
-            case 2:
-                mode = "Copy-MultiThreads";
-                nthread = oin.readInt();
-                break;
-            case 3:
-                mode = "Zero-Copy-MultiThreads";
-                nthread = oin.readInt();
-                break;
-            };
+            CopyMode mode = (CopyMode) oin.readObject();
 
+            int nthOfThread = -1;
+            if (mode == CopyMode.COPY_MULTITHREAD || mode == CopyMode.ZEROCOPY_MULTITHREAD) {
+                nthOfThread = oin.readInt();
+            }
+            
             File fileToSend = filefly.getFile(fileIdx);
-
-            long fileSize = fileToSend.length();
-            oout.writeLong(fileSize);
-            oout.flush();
+            
+            long fileSize = filefly.getFile(fileIdx).length();
+            Size _rawFileSize = new Size(SizeNotation.B, fileSize);
+            Size _displayFileSize = SizeConverter.toHighestSize(_rawFileSize);
 
             System.out.println(clientAddr + " requests file: " + fileToSend
                                + ", mode: " + mode
-                               + ", size " + SizeConverter
-                               .toHighestSize(new Size(SizeNotation.B,(fileSize))).toString());
+                               + ", size " + _displayFileSize.toString());        
 
-            Jio jio = new Jio();
             FileInputStream fis = new FileInputStream(fileToSend);
-            OutputStream outputStream = client.getOutputStream();
-            WritableByteChannel wbc = Channels.newChannel(outputStream);
+            WritableByteChannel wbc = Channels.newChannel(clientOutputStream);
             
             switch (mode) {
-            case "Copy":
-                jio.copyTransfer(fileToSend, fis, outputStream);
+            case COPY:
+                jio.copyTransfer(fileToSend, fis, clientOutputStream);
                 break;
-            case "Zero-Copy":
-                jio.zeroCopyTransfer(fileToSend, fis.getChannel(),
+            case ZEROCOPY:
+                jio.zeroCopyTransfer(fileToSend,
+                                     fis.getChannel(),
                                      wbc);
+                
                 break;
-            case "Copy-MultiThreads":
-                jio.multiThread(fileToSend, client.getInetAddress().getHostAddress(),
-                                client.getPort(), nthread,"Copy-Multithreads");
+            case COPY_MULTITHREAD:
+                jio.multiThread(fileToSend,
+                                client.getInetAddress().getHostAddress(),
+                                client.getPort(),
+                                nthOfThread,
+                                mode);
+                
                 break;
-            case "Zero-Copy-MultiThreads":
-                jio.multiThread(fileToSend,  client.getInetAddress().getHostAddress(), 
-                                client.getPort(), nthread,"Zero-Copy-Multithreads");
+            case ZEROCOPY_MULTITHREAD:
+                jio.multiThread(fileToSend,
+                                client.getInetAddress().getHostAddress(), 
+                                client.getPort(),
+                                nthOfThread,
+                                mode);
+                
                 break;
             default:
                 jio.copyTransfer(fileToSend, fis, oout);
                 break;
             }
+            
             boolean complete = oin.readBoolean();
             if (complete) {
                 System.out.println("complete" + clientAddr);

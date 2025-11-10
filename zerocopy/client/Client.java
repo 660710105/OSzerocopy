@@ -4,9 +4,9 @@ import java.io.*;
 import java.net.*;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.util.List;
 import java.util.Scanner;
 
+import zerocopy.common.CopyMode;
 import zerocopy.fileutils.Filefly;
 import zerocopy.ioutils.Jio;
 import zerocopy.ioutils.PrintProcess;
@@ -31,25 +31,23 @@ public class Client{
 
     public void run() {
         Scanner sc = new Scanner(System.in);
-        Socket socket;
-        ObjectInputStream oin;
-        ObjectOutputStream oout;
-
         try {
-            System.out.println(" >> Client download at " + targetDir);
-
-            socket = new Socket(host, port);
+            Socket socket = new Socket(host, port);
             socket.setKeepAlive(true);
 
-            System.out.println(" >> Connected Server " + host + ": " + port);
+            InputStream socketInputStream = socket.getInputStream();
+            OutputStream socketOutputStream = socket.getOutputStream();
+            
+            ObjectOutputStream oout = new ObjectOutputStream(socketOutputStream);
+            ObjectInputStream oin = new ObjectInputStream(socketInputStream);
 
-            oout = new ObjectOutputStream(socket.getOutputStream());
-            oin = new ObjectInputStream(socket.getInputStream());
+            ReadableByteChannel rbc = Channels.newChannel(socketInputStream);
 
             Object _rawFilefly = oin.readObject();
             Filefly filefly = (Filefly) _rawFilefly;
             
-            System.out.print("=== List files ===\n" + filefly.fancyFileInfo());
+            System.out.println("=== List files ===");
+            System.out.println(filefly.fancyFileInfo());
 
             System.out.println("=== Select File ===");
             System.out.print("Enter index of file: ");
@@ -72,91 +70,90 @@ public class Client{
                 System.err.println("Error: Mode not found");
             }
             
-            String mode = "";
-            switch (modeIdx) {
-            case 0:
-                mode = "Copy";
-                break;
-            case 1:
-                mode = "Zero-Copy";
-                break;
-            case 2:
-                mode = "Copy-MultiThreads";
-                break;
-            case 3:
-                mode = "Zero-Copy-MultiThreads";
-                break;
-            }
-
+            CopyMode mode = CopyMode.fromMode(modeIdx);
+            
             oout.writeInt(fileIdx);
-            oout.writeInt(modeIdx);
+            oout.writeObject(mode);
             oout.flush();
 
-            long fileSize = oin.readLong();
-            System.out.printf(" >> Server will send "
-                              + SizeConverter.toHighestSize(new Size(SizeNotation.B, fileSize)).toString()
-                              + ".\n");
+            long fileSizeByte = filefly.getFile(fileIdx).length();
+            Size fileSize = new Size(SizeNotation.B, fileSizeByte);
+            Size _highestFileSize = SizeConverter.toHighestSize(fileSize);
+            
+            System.out.printf(" >> Server will send " + _highestFileSize.toString() + ".\n");
 
-            File outFile = new File(targetDir, filefly.getFile(fileIdx).getName());
+            String _selectFileName = filefly.getFile(fileIdx).getName();
+
+            // create a new one on client
+            File outFile = new File(targetDir, _selectFileName);
             FileOutputStream fos = new FileOutputStream(outFile);
-            long start = System.currentTimeMillis();
-            InputStream in = socket.getInputStream();
-            ReadableByteChannel rbc = Channels.newChannel(in);
-
-            byte[] buffer = new byte[Jio.BUFFER_SIZE];
-            long remain = fileSize;
+            
             PrintProcess printProcess = new PrintProcess();
             Thread processThread = new Thread(printProcess);
+            
+            long startTime = System.currentTimeMillis();
+            
+            byte[] buffer = new byte[Jio.BUFFER_SIZE];
+            long remainSize = fileSizeByte;
+            
             switch (mode) {
-            case "Copy":
+            case COPY:
                 processThread.start();
-                while (remain > 0) {
-                    int toRead = (int) Math.min(buffer.length, remain);
-                    int r = in.read(buffer, 0, toRead);
-                    if (r < 0)
+                while (remainSize > 0) {
+                    int neededToRead = (int) Math.min(buffer.length, remainSize);
+                    int readByte = socketInputStream.read(buffer, 0, neededToRead);
+                    
+                    if (readByte < 0) {
                         throw new EOFException("Unexpected EOF");
-                    fos.write(buffer, 0, r);
-                    remain -= r;
+                    }
+                    
+                    fos.write(buffer, 0, readByte);
+                    remainSize -= readByte;
 
-                    printProcess.setProcess(fileSize-remain);
+                    printProcess.setProcess(fileSizeByte - remainSize);
                 }
                 processThread.interrupt();
                 printProcess.stop();
                 fos.flush();
-
                 break;
-            case "Zero-Copy":
+            case ZEROCOPY:
                 long position = 0;
                 System.out.println("Downloading file ...");
-                while (position < fileSize) {
-                                                
-                    long transferred = fos.getChannel().transferFrom(rbc, position, fileSize);
-
+                while (position < fileSizeByte) {
+                    long transferred = fos.getChannel().transferFrom(rbc, position, fileSizeByte);
                     if (transferred <= 0) {
                         System.err.println("Transfer stalled or socket closed.");
                         break;
                     }
-
                     position += transferred;
                 }
                 break;
-            case "Copy-MultiThreads":
-            case "Zero-Copy-MultiThreads":
-
+            case COPY_MULTITHREAD:
+            case ZEROCOPY_MULTITHREAD:
                 break;
             }
 
-            long end = System.currentTimeMillis();
-            System.out.printf("Sent " + filefly.getFile(fileIdx).getName()
-                              + ", mode " + mode
-                              + " (%.2f s)\n", ((end - start) / 1000.0));
+            long endTime = System.currentTimeMillis();
+            double totaltime = (endTime - startTime) / 1000F;
+
+            System.out.printf("Sent file: " + _selectFileName +
+                              " with mode: " + mode.toString() +
+                              " in ", totaltime);
+
+            fos.close();
+            
             oout.writeBoolean(true); // send complete
             oout.flush();
+
+            // wait for client fully terminate
             Thread.sleep(2000);
+            
             oin.close();
             oout.close();
-            in.close();
-            fos.close();
+
+            // do not need since it is already close, but for good will
+            socketInputStream.close();
+            socketOutputStream.close();
             socket.close();
         } catch (SocketException s) {
             System.out.println("Disconnected server");
@@ -166,7 +163,6 @@ public class Client{
         } catch (ClassNotFoundException c) {
             c.printStackTrace();
         } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } finally {
             sc.close();

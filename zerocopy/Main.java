@@ -107,7 +107,8 @@ public class Main {
             } else {
                 String info = infoStringBuilder
                     .append("\nSelecting remote: " + remoteHost + " ")
-                    .append("on port " + port)
+                    .append("on port " + port + "\n")
+                    .append("Client will download at " + sendDirectory)
                     .toString();
 
                 System.out.println(info);

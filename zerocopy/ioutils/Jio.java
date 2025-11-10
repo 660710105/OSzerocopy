@@ -8,6 +8,8 @@ import java.net.SocketException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
+import zerocopy.common.CopyMode;
+
 public class Jio {
     public static int BUFFER_SIZE = 64 * 1024;
 
@@ -35,11 +37,11 @@ public class Jio {
                 position += transferred;
             }
         } catch (SocketException s) {
-           s.printStackTrace();
+            s.printStackTrace();
         }
     }
 
-    public void multiThread(File file, String host, int port, int nthread, String mode) throws IOException {
+    public void multiThread(File file, String host, int port, int nthread, CopyMode mode) throws IOException {
         long partSize = file.length() / nthread;
         Thread[] threads = new Thread[nthread];
         for (int i = 0; i < nthread; i++) {
