@@ -2,9 +2,12 @@ package zerocopy.client;
 
 import java.io.*;
 import java.net.*;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.util.List;
 import java.util.Scanner;
 
+import zerocopy.ioutils.PrintProcess;
 import zerocopy.ioutils.notation.Size;
 import zerocopy.ioutils.notation.SizeConverter;
 import zerocopy.ioutils.notation.SizeNotation;
@@ -61,11 +64,11 @@ public class Client implements Runnable {
                         }
                         String filename = listFilenames.get(indexFile);
 
-                        System.out.println("=== Select Mode === \n "
-                                        + " 0 = Copy \n"
-                                        + " 1 = Zero-Copy \n"
-                                        + " 2 = Copy-MultiThreads \n"
-                                        + " 3 = Zero-Copy-MultiThreads");
+                        System.out.println("=== Select Mode ===\n "
+                                        + "0 = Copy \n"
+                                        + "1 = Zero-Copy \n"
+                                        + "2 = Copy-MultiThreads \n"
+                                        + "3 = Zero-Copy-MultiThreads");
                         System.out.print("Select: ");
                         int modeIdx = sc.nextInt();
                         if (modeIdx > 3) {
@@ -100,11 +103,16 @@ public class Client implements Runnable {
                         FileOutputStream fos = new FileOutputStream(outFile);
                         long start = System.currentTimeMillis();
                         InputStream in = socket.getInputStream();
+                        ReadableByteChannel rbc = Channels.newChannel(in);
 
                         byte[] buffer = new byte[64 * 1024];
                         long remain = fileSize;
+                        PrintProcess printProcess = new PrintProcess();
+                        Thread processThread = new Thread(printProcess);
                         switch (mode) {
                                 case "Copy":
+                                        processThread.start();
+                                        String processCopy;
                                         while (remain > 0) {
                                                 int toRead = (int) Math.min(buffer.length, remain);
                                                 int r = in.read(buffer, 0, toRead);
@@ -112,25 +120,34 @@ public class Client implements Runnable {
                                                         throw new EOFException("Unexpected EOF");
                                                 fos.write(buffer, 0, r);
                                                 remain -= r;
-                                                // System.out.printf(
-                                                // "Download %s.\n", SizeConverter
-                                                // .toHighestSize(new Size(SizeNotation.B,
-                                                // (fileSize - remain)))
-                                                // .toString());
+                                                processCopy = SizeConverter
+                                                                .toHighestSize(new Size(SizeNotation.B,
+                                                                                (fileSize - remain)))
+                                                                .toString();
+                                                //System.out.printf("Download %s.\n", processCopy);
+
+                                                printProcess.setProcess(processCopy);
+
                                         }
+                                        processThread.interrupt();
+                                        printProcess.stop();
                                         fos.flush();
+
                                         break;
                                 case "Zero-Copy":
-                                        long transferred = in.transferTo(fos);
+                                        long position = 0;
+                                        System.out.println("Downloading file ...");
+                                        while (position < fileSize) {
+                                                
+                                                long transferred = fos.getChannel().transferFrom(rbc, position, fileSize);
+
                                                 if (transferred <= 0) {
                                                         System.err.println("Transfer stalled or socket closed.");
                                                         break;
                                                 }
-                                                System.out.printf(
-                                                                "Download %s.\n", SizeConverter
-                                                                                .toHighestSize(new Size(SizeNotation.B,
-                                                                                                (fileSize - remain)))
-                                                                                .toString());
+
+                                                position += transferred;
+                                        }
                                         break;
                                 case "Copy-MultiThreads":
                                 case "Zero-Copy-MultiThreads":
