@@ -51,9 +51,9 @@ public class Client{
 
             System.out.println("=== Select File ===");
             System.out.print("Enter index of file: ");
-            int fileIdx = Integer.parseInt(sc.nextLine());
+            int fileIdx = Integer.parseInt(sc.nextLine()) - 1;
             
-            if (fileIdx >= filefly.size()) {
+            if (fileIdx < 0 || fileIdx > filefly.size()) {
                 System.err.println("Error: File index out of bound");
             }
 
@@ -138,7 +138,7 @@ public class Client{
 
             System.out.printf("Sent file: " + _selectFileName +
                               " with mode: " + mode.toString() +
-                              " in ", totaltime);
+                              " in " + totaltime);
 
             fos.close();
             
