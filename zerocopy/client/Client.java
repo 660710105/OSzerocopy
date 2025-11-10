@@ -134,11 +134,12 @@ public class Client{
             }
 
             long endTime = System.currentTimeMillis();
-            double totaltime = (endTime - startTime) / 1000F;
+            double totalTime = (endTime - startTime) / 1000F;
+            String totalTimeString = String.format("%.2f", totalTime);
 
-            System.out.printf("Sent file: " + _selectFileName +
+            System.out.printf("Completely received file: " + _selectFileName +
                               " with mode: " + mode.toString() +
-                              " in " + totaltime);
+                              " done in " + totalTimeString + "ms\n");
 
             fos.close();
             
