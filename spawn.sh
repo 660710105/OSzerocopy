@@ -1,6 +1,5 @@
 #!/bin/bash
 
-git clean -x -f
-
-javac zerocopy/Main.java
-java zerocopy/Main $@
+javac -d build zerocopy/**/*.java
+javac -d build zerocopy/*.java
+java -cp build zerocopy/Main $@
