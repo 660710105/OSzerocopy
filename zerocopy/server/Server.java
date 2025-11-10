@@ -18,8 +18,7 @@ public class Server implements Runnable {
                         throw new IllegalArgumentException("Directory does not exist: " + fileDir.getAbsolutePath());
                 }
 
-                try {
-                        ServerSocket serverSocket = new ServerSocket(port);
+                try (ServerSocket serverSocket = new ServerSocket(port)){
                         System.out.println(
                                         "=== Server listening on port " + port + ", fileDirectory: "
                                                         + fileDir.getAbsolutePath() + " ===");
@@ -29,7 +28,6 @@ public class Server implements Runnable {
                                 handle.start();
                         }
                 } catch (IOException e) {
-                        // TODO Auto-generated catch block
                         e.printStackTrace();
                 }
         }
