@@ -13,7 +13,7 @@ public class Filefly implements Serializable {
     private File ownFile;
     
     public Filefly(String path) {
-        File ownFile = new File(path);
+        ownFile = new File(path);
         if (ownFile.exists() == false) {
             throw new IllegalArgumentException("File or directory does not exist: " + ownFile.getAbsolutePath());
         }
@@ -54,7 +54,10 @@ public class Filefly implements Serializable {
         int maxFileSizePrintLength = 10;
 
         StringBuilder stringBuilder = new StringBuilder();
+        long fileIdx = 1;
         for (File _file : files) {
+            stringBuilder.append(fileIdx++ + ". ");
+            
             String fileName = _file.getName();
             if (fileName.length() > maxFileNamePrintLength) {
                 // print ... at the end of file

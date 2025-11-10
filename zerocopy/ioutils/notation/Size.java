@@ -1,6 +1,8 @@
 package zerocopy.ioutils.notation;
 
-public class Size {
+import java.io.Serializable;
+
+public class Size implements Serializable {
     private SizeNotation sizeNotation;
     private double size;
 
