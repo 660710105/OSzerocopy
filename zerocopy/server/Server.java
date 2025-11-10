@@ -15,8 +15,9 @@ public class Server{
         }
 
         public void run() {
+                ServerSocket serverSocket = null;
                 try {
-                        ServerSocket serverSocket = new ServerSocket(port);
+                        serverSocket = new ServerSocket(port);
                         System.out.println(
                                         "=== Server listening on port " + port + ", fileDirectory: "
                                                         + filefly.getOwnFile().getAbsolutePath() + " ===");
@@ -26,8 +27,15 @@ public class Server{
                                 handle.start();
                         }
                 } catch (IOException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
+                        // e.printStackTrace();
+                        System.err.println("Server socket error: " + e.getCause());
+                } finally {
+                        try { 
+                                if(serverSocket != null) 
+                                        serverSocket.close(); 
+                        } catch (IOException io){
+                                System.err.println("Server shutdown");
+                        }
                 }
         }
 }

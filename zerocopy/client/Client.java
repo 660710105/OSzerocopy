@@ -43,6 +43,9 @@ public class Client{
 
             ReadableByteChannel rbc = Channels.newChannel(socketInputStream);
 
+            oout.writeObject("CLIENT_REQUEST");
+            oout.flush();
+
             Object _rawFilefly = oin.readObject();
             Filefly filefly = (Filefly) _rawFilefly;
             
@@ -74,6 +77,14 @@ public class Client{
             
             oout.writeInt(fileIdx);
             oout.writeObject(mode);
+
+            int nthOfThread = 1;
+            if (mode == CopyMode.COPY_MULTITHREAD || mode == CopyMode.ZEROCOPY_MULTITHREAD) {
+                System.out.print("Number of Threads: ");
+                nthOfThread = sc.nextInt();
+                nthOfThread = (nthOfThread < 1)? 1:nthOfThread;
+                oout.writeInt(nthOfThread);
+            }
             oout.flush();
 
             long fileSizeByte = filefly.getFile(fileIdx).length();
@@ -130,6 +141,13 @@ public class Client{
                 break;
             case COPY_MULTITHREAD:
             case ZEROCOPY_MULTITHREAD:
+                try {
+                    Jio jio = new Jio();
+                    jio.multiThread(filefly.getFile(fileIdx), fileSizeByte, host, port, nthOfThread, mode, targetDir);
+                } catch (InterruptedException e) {
+                    System.err.println("Multi-thread download interrupted.");
+                    e.printStackTrace();
+                }
                 break;
             }
 
@@ -139,7 +157,7 @@ public class Client{
 
             System.out.printf("Completely received file: " + _selectFileName +
                               " with mode: " + mode.toString() +
-                              " done in " + totalTimeString + "ms\n");
+                              " done in (" + totalTimeString + "s)\n");
 
             fos.close();
             
