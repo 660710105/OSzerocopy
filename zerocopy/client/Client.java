@@ -73,7 +73,7 @@ public class Client{
             System.out.print("Select: ");
             
             int modeIdx = sc.nextInt();
-            if (modeIdx > 4) {
+            if (modeIdx < 1 || modeIdx > 4) {
                 System.err.println("Error: Mode not found");
             }
             
