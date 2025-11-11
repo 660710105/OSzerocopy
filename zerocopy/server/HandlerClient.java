@@ -104,9 +104,8 @@ public class HandlerClient implements Runnable {
                 jio.copyTransfer(fis, clientOutputStream);
                 break;
             case ZEROCOPY:
-                jio.zeroCopyTransfer(fileToSend,
-                                     fis.getChannel(),
-                                     wbc);
+                jio.zeroCopyTransfer(fis.getChannel(),
+                                     wbc, fileSize);
                 
                 break;
             case COPY_MULTITHREAD:

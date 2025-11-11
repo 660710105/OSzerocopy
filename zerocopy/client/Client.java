@@ -146,8 +146,8 @@ public class Client{
             case COPY_MULTITHREAD:
             case ZEROCOPY_MULTITHREAD:
                 try {
-                    Jio jio = new Jio();
-                    jio.multiThread(outFile, fileSizeByte, host, port, nthOfThread, mode, targetDir);
+                    MultithreadReceive multithreadReceive = new MultithreadReceive();
+                    multithreadReceive.multiThread(outFile, fileSizeByte, host, port, nthOfThread, mode, targetDir);
                 } catch (InterruptedException e) {
                     System.err.println("Multi-thread download interrupted.");
                     e.printStackTrace();
@@ -161,7 +161,7 @@ public class Client{
 
             System.out.printf("Completely received file: " + _selectFileName +
                               " with mode: " + mode.toString() +
-                              " done in (" + totalTimeString + "s)\n");
+                              " done in " + totalTimeString + "s\n");
 
             fos.close();
             
